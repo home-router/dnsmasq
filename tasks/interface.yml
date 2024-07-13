@@ -1,0 +1,5 @@
+- name: generate config for interface {{ item.key }}
+  template: src=etc/dnsmasq.d/interface.conf.j2 dest=/etc/dnsmasq.d/{{ item.key }}.conf
+  notify: restart dnsmasq
+  tags:
+    - config

@@ -1,0 +1,54 @@
+dnsmasq_local_domain: home
+
+dnsmasq_self_address: 192.168.1.254
+
+dnsmasq_dns_port: 53
+dnsmasq_cache_size: 1024
+
+dnsmasq_interfaces:
+  eth0:
+    # key names follow dnsmasq's man page
+    domain:
+      name: "{{ dnsmasq_local_domain }}"
+      address_range: 192.168.1.0/24
+    dhcp_range: 
+      start: 192.168.1.50
+      end: 192.168.1.239
+      mask: 255.255.255.0
+      lease_time: 28800
+    dhcp_option:
+      router: "{{ dnsmasq_self_address }}"
+      dns_server: "{{ dnsmasq_self_address }}"
+      raw_options:
+        # Add custom options directly here.
+        - tag:BAR,option:router,192.168.1.1
+    dhcp_host:
+      - { hwaddr: "aa:bb:cc:dd", ipaddr: "192.168.1.2", hostname: "foo" }
+      - { hwaddr: "de:ad:be:ef", ipaddr: "192.168.1.3", hostname: "bar", set: "BAR" }
+
+# This will change /etc/resolv.conf to point to 127.0.0.1 thus using local dnsmasq a
+# name server.
+# Avoid setting dnsmasq_resolv_file to /etc/resolv.conf if this is set to true.
+dnsmasq_as_system_resolver: true
+# Used when above variable is set to true.
+# Set search domain config in /etc/resolv.conf
+dnsmasq_search_domains:
+  - "{{ dnsmasq_local_domain }}"
+
+# Use file to specify nameservers so we can change DNS servers without restarting dnsmasq.
+dnsmasq_resolv_file: /etc/resolv.conf.dnsmasq
+# We can use DNS provided by pppoe like the following:
+#dnsmasq_resolv_file: /etc/ppp/resolv.conf
+
+# Specify nameservers to include in dnsmasq_resolv_file.
+# This is an optional config. dnsmasq_resolv_file will only be updated if this variable is defined.
+#dnsmasq_nameservers:
+#  - 1.1.1.1
+#  - 8.8.8.8
+
+# Following record will be added to /etc/hosts.
+dnsmasq_static_hosts:
+  - { hostname: router, ipaddr: "192.168.1.254" }
+
+# Add custom dnsmasq configuration here.
+dnsmasq_global_conf: ""

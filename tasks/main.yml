@@ -1,0 +1,53 @@
+- name: install package on system
+  include: "{{ router_os_distribution }}-pkg.yml"
+
+- name: prevent PVE host from modifying /etc/resolv.conf
+  copy: content="" dest=/etc/.pve-ignore.resolv.conf force=no group=root owner=root mode="0644"
+
+- name: enable dnsmasq service
+  systemd: name=dnsmasq enabled=true
+
+- name: create dnsmasq.d
+  file: path=/etc/dnsmasq.d state=directory owner=root group=root mode=0755
+
+- name: generate config
+  template: src={{ item }} dest=/{{ item | regex_replace('\.j2', '') }}
+  with_items:
+    - etc/dnsmasq.conf.j2
+  notify: restart dnsmasq
+  tags:
+    - config
+
+- name: generate dnsmasq resolv file
+  template: src={{ item }} dest={{ dnsmasq_resolv_file }}
+  with_items:
+    - etc/resolv.conf.dnsmasq.j2
+  when: dnsmasq_nameservers is defined
+  tags:
+    - config
+
+- name: generate interface config under dnsmasq.d
+  include_tasks: interface.yml
+  loop: "{{ dnsmasq_interfaces | dict2items }}"
+  tags:
+    - config
+
+- name: add record to /etc/hosts
+  lineinfile:
+    path: /etc/hosts
+    regexp: "^{{ item.address }}"
+    line: "{{item.address }}    {{ item.name }}"
+  with_items:
+    - "{{ dnsmasq_static_hosts }}"
+  notify: reload dnsmasq
+  tags:
+    - config
+    - hostrecord
+
+- name: use 127.0.0.1 as local nameserver
+  template: src={{ item }} dest=/{{ item | regex_replace('\.j2$', '') }}
+  with_items:
+    - etc/resolv.conf.j2
+  when: dnsmasq_as_system_resolver
+  tags:
+    - config

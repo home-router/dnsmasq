@@ -1,0 +1,4 @@
+nameserver 127.0.0.1
+{% for domain in dnsmasq_search_domains %}
+search {{ domain }}
+{% endfor %}

@@ -1,0 +1,29 @@
+interface={{ item.key }}
+
+domain={{ item.value["domain"]["name"] }},{{ item.value["domain"]["address_range"] }},local
+dhcp-range=tag:{{ item.key }},{{ item.value["dhcp_range"]["start"] }},{{ item.value["dhcp_range"]["end"] }},{{ item.value["dhcp_range"]["mask"] }},{{ item.value["dhcp_range"]["lease_time"] }}
+
+# When selecting --dhcp-options, a tag from --dhcp-range is second class
+# relative to other tags, to make it easy to override options for individual
+# hosts
+dhcp-option=tag:{{ item.key }},option:domain-name,local
+dhcp-option=tag:{{ item.key }},option:router,{{ item.value["dhcp_option"]["router"] }}
+dhcp-option=tag:{{ item.key }},option:dns-server,{{ item.value["dhcp_option"]["dns_server"] }}
+
+{% if "raw_options" in item.value["dhcp_option"] %}
+# Custom dhcp-option.
+{% for raw in item.value["dhcp_option"]["raw_options"] %}
+dhcp-option={{ raw }}
+{% endfor %}
+{% endif %}
+
+{% for h in item.value["dhcp_host"] %}
+# host {{ h["hostname"] }}
+{%   if "set" in h %}
+dhcp-host={{ h["hwaddr"] }},set:{{ h["set"] }},tag:{{ item.key }},{{ h["ipaddr"] }},{{ h["hostname"] }}
+{%   else %}
+dhcp-host={{ h["hwaddr"] }},tag:{{ item.key }},{{ h["ipaddr"] }},{{ h["hostname"] }}
+{%   endif %}
+host-record={{ h["hostname"] }}.{{ item.value["domain"]["name"] }},{{ item.value["dhcp_range"]["lease_time"] }}
+
+{% endfor %}

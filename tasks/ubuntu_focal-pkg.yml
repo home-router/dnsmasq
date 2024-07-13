@@ -1,0 +1,4 @@
+- name: install dnsmasq on Ubuntu
+  apt:
+      name: dnsmasq
+      state: present
